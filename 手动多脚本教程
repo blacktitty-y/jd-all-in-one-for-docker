@@ -1,0 +1,60 @@
+================Docker薅京豆教程==================
+
+安装好Docker后，按如下操作（root账户 或者 root权限，sudo -i）：
+
+# 创建config文件夹，用来保存下面要下载的两个配置文件
+mkdir -p /appdata/jd
+chmod 777 -R /appdata/jd
+cd /appdata/jd
+mkdir config
+
+# 下载配置文件
+wget --no-check-certificate https://gitee.com/evine/jd-base/raw/v3/sample/config.sh.sample -O config/config.sh
+
+# 下载定时任务清单文件
+wget --no-check-certificate https://gitee.com/evine/jd-base/raw/v3/sample/docker.list.sample -O config/crontab.list
+
+# 分别编辑刚刚下载到config文件夹下的两个文件：（果在windows下编辑，请使用WinSCP自带编辑器，或 notepad++、VS Code、Sublime Text 3等软件，请不要使用记事本。）
+config.sh           #找到cookie那一项，在“之间填入你的cookie，不需要填入浏览器获取的整个cookie字符，有效值看这个sh文件的关于cookie的注释说明
+crontab.list        #可以设置脚本运行时间，不想要的脚本注释或者删掉
+
+
+#正式创建容器（2选1），直接复制即可，注释不影响运行：
+
+docker run -dit \
+-v /appdata/jd/config:/jd/config `# 冒号左边是刚刚下载的两个文件存放的目录` \
+-v /appdata/jd/log:/jd/log `# 日志保存目录` \
+--name jd \
+--hostname jd \
+--restart always \
+--network host `#如果是旁路由OpenWrt的Docker，建议添加上此行` \
+evinedeng/jd
+
+docker run -dit \
+-v /appdata/jd/config:/jd/config `# 冒号左边是刚刚下载的两个文件存放的目录` \
+-v /appdata/jd/log:/jd/log `# 日志保存目录` \
+--name jd \
+--hostname jd \
+--restart always \
+--network host `#如果是旁路由OpenWrt的Docker，建议添加上此行` \
+evinedeng/jd:gitee
+
+#如果想同时运行多个容器并发，按上述方式部署不同名称不同映射路径的容器也是可以的，看你个人需要。比如第二个容器就按照上面步骤新建一个 /appdata/jd2，docker创建命令中
+jd这个也同步改成jd2，但是 :/jd/config :/jd/config 这两个不能改
+
+
+# 自动更新Docker容器：安装containrrr/watchtower可以自动更新容器
+
+docker run -d \
+    --name watchtower \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    containrrr/watchtower
+	
+#############以下内容可以不用看############
+！如何更新配置文件
+config.sh和crontab.list两个文件都一样，改完保存好就行，其他啥也不用干，容器也不用重启什么，改完以后，新的任务就以新配置运行了。
+
+！手动执行薅羊毛脚本，用法如下(其中exec后面的jd为容器名，bash后面的jd为命令名，xxx为lxk0301大佬的脚本名称)：
+
+docker exec jd bash jd xxx      # 如果设置了随机延迟并且当时时间不在0-2、30-31、59分内，将随机延迟一定秒数
+docker exec jd bash jd xxx now  # 无论是否设置了随机延迟，均立即运行
